@@ -50,6 +50,16 @@ def analyze_answers(document_text):
             raise ValueError("No valid JSON array found in Gemini response.")
 
         parsed = json.loads(match.group(0))
+
+        # Ensure every analysis contains necessary fields, even if empty
+        for item in parsed:
+            item.setdefault("question", "")
+            item.setdefault("answer", "")
+            item.setdefault("is_correct", False)
+            item.setdefault("correct_answer", "")
+            item.setdefault("explanation", "")
+            item.setdefault("suggestion", "")
+
         return parsed
 
     except Exception as e:
