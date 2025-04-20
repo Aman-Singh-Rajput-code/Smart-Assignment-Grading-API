@@ -43,14 +43,23 @@ def grade_assignment():
         file.save(file_path)
 
         try:
+            # Extract text based on file type
             if filename.lower().endswith('.pdf'):
                 text = extract_text_from_pdf(file_path)
             else:
                 text = extract_text_from_docx(file_path)
 
+            # Analyze answers using Gemini
             analysis = analyze_answers(text)
+
+            # Check for error in analysis
+            if isinstance(analysis, list) and 'error' in analysis[0]:
+                return jsonify({'error': analysis[0]['error']}), 500
+
+            # Assign grade
             grade = assign_grade(analysis)
 
+            # ✅ Return full result
             return jsonify({
                 'grade': grade,
                 'analysis': analysis
