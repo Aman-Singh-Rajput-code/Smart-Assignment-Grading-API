@@ -51,14 +51,24 @@ def analyze_answers(document_text):
 
         parsed = json.loads(match.group(0))
 
-        # Ensure every analysis contains necessary fields, even if empty
+        # ✅ Attach original answers back by matching question_num
         for item in parsed:
+            q_num = item.get("question_num")
+            original = next((q for q in qa_pairs if q["question_num"] == q_num), None)
+            if original:
+                item["answer"] = original["answer"]
+
+            # Set defaults if keys are missing
             item.setdefault("question", "")
             item.setdefault("answer", "")
             item.setdefault("is_correct", False)
             item.setdefault("correct_answer", "")
             item.setdefault("explanation", "")
             item.setdefault("suggestion", "")
+
+        print("\n✅ Final Parsed Analysis:")
+        for item in parsed:
+            print(json.dumps(item, indent=2))
 
         return parsed
 
