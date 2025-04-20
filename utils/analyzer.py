@@ -1,4 +1,4 @@
-# ✅ utils/analyzer.py (Improved JSON extraction)
+# utils/analyzer.py (Batch version)
 import google.generativeai as genai
 import re
 import json
@@ -8,7 +8,6 @@ from utils.document_parser import extract_qa_pairs
 
 load_dotenv()
 
-# Configure Gemini API
 API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=API_KEY)
 
@@ -19,63 +18,42 @@ def analyze_answers(document_text):
         return [{"error": "No question-answer pairs found in the document"}]
 
     model = genai.GenerativeModel("gemini-1.5-pro-latest")
-    results = []
 
-    for qa_pair in qa_pairs:
-        question = qa_pair['question']
-        user_answer = qa_pair['answer']
-        question_num = qa_pair['question_num']
+    # Build a batched prompt with all Q&A pairs
+    batched_prompt = "You are an expert evaluator. Analyze the following Q&A pairs and return valid JSON array. Format for each:\n\n" + \
+    """[
+      {
+        "question_num": "Q1",
+        "question": "What is Python?",
+        "answer": "Python is a programming language.",
+        "is_correct": true,
+        "correct_answer": "Python is a high-level programming language.",
+        "explanation": "The answer is correct but can be more detailed.",
+        "suggestion": "Mention that it's high-level and widely used for scripting, web dev, etc."
+      }
+    ]\n\n""" + \
+    "Now analyze:\n"
 
-        prompt = f"""
-You are an expert assignment evaluator. Respond strictly in valid JSON format.
+    for pair in qa_pairs:
+        batched_prompt += f"Q{pair['question_num']}: {pair['question']}\n"
+        batched_prompt += f"A{pair['question_num']}: {pair['answer']}\n\n"
 
-Question: {question}
-Answer: {user_answer}
+    try:
+        response = model.generate_content(batched_prompt)
+        response_text = response.text.strip()
 
-Format:
-{{
-  "is_correct": true,
-  "correct_answer": "Expected correct answer",
-  "explanation": "Why the answer is right or wrong",
-  "suggestion": "How the answer can be improved"
-}}
-"""
+        print(f"\n🔍 Gemini Raw Response (BATCH):\n{response_text[:1000]}\n")
 
-        try:
-            response = model.generate_content(prompt)
-            response_text = response.text.strip()
-            print(f"\n🔍 Gemini Raw Response (Q{question_num}):\n{response_text}\n")
+        # Extract JSON array from response
+        match = re.search(r'\[\s*{.*?}\s*\]', response_text, re.DOTALL)
+        if not match:
+            raise ValueError("No valid JSON array found in Gemini response.")
 
-            try:
-                analysis = json.loads(response_text)
-            except json.JSONDecodeError:
-                json_match = re.search(r'\{.*?\}', response_text.replace('\n', ' '), re.DOTALL)
-                if json_match:
-                    analysis = json.loads(json_match.group(0))
-                else:
-                    analysis = {
-                        "is_correct": None,
-                        "correct_answer": "Unable to determine",
-                        "explanation": "Error processing the response",
-                        "suggestion": "Please try again"
-                    }
+        parsed = json.loads(match.group(0))
+        return parsed
 
-            results.append({
-                "question_num": question_num,
-                "question": question,
-                "user_answer": user_answer,
-                "is_correct": analysis.get("is_correct", False),
-                "correct_answer": analysis.get("correct_answer", ""),
-                "explanation": analysis.get("explanation", ""),
-                "suggestion": analysis.get("suggestion", "")
-            })
-
-        except Exception as e:
-            results.append({
-                "question_num": question_num,
-                "question": question,
-                "user_answer": user_answer,
-                "error": f"Failed to analyze: {str(e)}"
-            })
-
-    return results
+    except Exception as e:
+        print("❌ Error analyzing batch:", str(e))
+        return [{
+            "error": f"Batch analysis failed: {str(e)}"
+        }]

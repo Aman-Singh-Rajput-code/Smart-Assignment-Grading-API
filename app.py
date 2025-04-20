@@ -1,17 +1,17 @@
+# app.py
 from flask import Flask, request, jsonify
 import os
 import uuid
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
 
-from utils.document_parser import extract_text_from_pdf, extract_text_from_docx, extract_qa_pairs
+from utils.document_parser import extract_text_from_pdf, extract_text_from_docx
 from utils.analyzer import analyze_answers
 from utils.grader import assign_grade
 from config import API_KEY, UPLOAD_FOLDER, ALLOWED_EXTENSIONS
-#CORS(app)
+
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
-
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
@@ -27,7 +27,6 @@ def home():
         "message": "Smart Assignment Grading API is running 🎯",
         "usage": "POST a .docx or .pdf file to /api/grade-assignment"
     })
-
 
 @app.route('/api/grade-assignment', methods=['POST'])
 def grade_assignment():
@@ -49,11 +48,7 @@ def grade_assignment():
             else:
                 text = extract_text_from_docx(file_path)
 
-#            qa_pairs = extract_qa_pairs(text)
-#            analysis = analyze_answers(qa_pairs)
-#            text = extract_text_from_pdf(file_path)  # or extract_text_from_docx
-            analysis = analyze_answers(text)  # ✅ pass string here
-
+            analysis = analyze_answers(text)
             grade = assign_grade(analysis)
 
             return jsonify({
