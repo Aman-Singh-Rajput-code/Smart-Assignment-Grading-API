@@ -57,9 +57,10 @@ def grade_assignment():
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            print(f"❌ Error: {str(e)}")
+            return jsonify({'error': f"Error processing the file: {str(e)}"}), 500
 
-    return jsonify({'error': 'File type not allowed'}), 400
+    return jsonify({'error': 'Invalid file type. Only .pdf and .docx are allowed.'}), 400
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
