@@ -17,7 +17,7 @@ def analyze_answers(document_text):
     if not qa_pairs:
         return [{"error": "No question-answer pairs found in the document"}]
 
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     # Build a batched prompt with all Q&A pairs
     batched_prompt = "You are an expert evaluator. Analyze the following Q&A pairs and return valid JSON array. Format for each:\n\n" + \
